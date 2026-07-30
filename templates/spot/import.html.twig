@@ -1,0 +1,11 @@
+{% extends "base.html.twig" %}
+{% block content %}
+<h2>Importer un fichier Excel</h2>
+<form action="{{ path('spots_import') }}" method="post" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label class="form-label">Fichier Excel (.xlsx)</label>
+        <input type="file" name="file" class="form-control" accept=".xlsx" required>
+    </div>
+    <button class="btn btn-primary">Importer</button>
+</form>
+{% endblock %}

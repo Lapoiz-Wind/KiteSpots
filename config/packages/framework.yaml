@@ -8,6 +8,13 @@ framework:
     #esi: true
     #fragments: true
 
+when@prod:
+    framework:
+        # Railway (and most PaaS) terminate TLS at a reverse proxy and forward
+        # the request over plain HTTP with X-Forwarded-* headers.
+        trusted_proxies: '%env(TRUSTED_PROXIES)%'
+        trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port']
+
 when@test:
     framework:
         test: true

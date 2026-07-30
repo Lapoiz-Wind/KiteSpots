@@ -1,0 +1,21 @@
+{% extends "base.html.twig" %}
+{% block content %}
+<h1>Spots de Kitesurf</h1>
+<div class="row">
+{% for spot in spots %}
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5>{{ spot.nom }}</h5>
+                <p class="text-muted">{{ spot.region }}</p>
+                <p>{{ spot.shortDescription|slice(0, 100) }}...</p>
+                <a href="{{ path('spot_show', {codeSpot: spot.codeSpot}) }}" class="btn btn-sm btn-primary">Voir</a>
+                {% if is_granted('ROLE_ADMIN') %}
+                    <a href="{{ path('spot_edit', {codeSpot: spot.codeSpot}) }}" class="btn btn-sm btn-warning">Éditer</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endfor %}
+</div>
+{% endblock %}

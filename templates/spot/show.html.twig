@@ -1,0 +1,119 @@
+{% extends "base.html.twig" %}
+{% block content %}
+<h1>{{ spot.nom }}</h1>
+<p><strong>Région:</strong> {{ spot.region }} | <strong>Note:</strong> {{ spot.note }}</p>
+{{ spot.description|raw }}
+<hr>
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h4>Orientation du vent</h4>
+        <div style="text-align: center;">
+            <svg id="windrose" width="300" height="300" style="margin: 20px auto; display: block;">
+                <!-- Cercle de base -->
+                <circle cx="150" cy="150" r="140" fill="none" stroke="#ddd" stroke-width="1"/>
+                <circle cx="150" cy="150" r="110" fill="none" stroke="#ddd" stroke-width="0.5" stroke-dasharray="5,5"/>
+
+                <!-- Lignes cardinales majeures (N, E, S, W) -->
+                <line x1="150" y1="20" x2="150" y2="280" stroke="#999" stroke-width="2" opacity="0.3"/>
+                <line x1="20" y1="150" x2="280" y2="150" stroke="#999" stroke-width="2" opacity="0.3"/>
+
+                <!-- Directions intercalaires -->
+                <line x1="150" y1="20" x2="150" y2="280" stroke="none"/>
+
+                <!-- Secteurs de vent (barres radialisées) -->
+                <g id="windBars"></g>
+
+                <!-- Aiguille nord -->
+                <g id="northArrow">
+                    <polygon points="150,80 145,100 155,100" fill="#d32f2f" opacity="0.7"/>
+                </g>
+            </svg>
+        </div>
+        <p style="text-align: center; font-size: 12px;">🟢 TOP | 🔵 OK | 🟠 WARN | 🔴 KO</p>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dirs = ['n', 'nne', 'ne', 'ene', 'e', 'ese', 'se', 'sse', 's', 'ssw', 'sw', 'wsw', 'w', 'wnw', 'nw', 'nnw'];
+            const angles = [0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5];
+            const colors = {'-1': '#dc3545', '0': '#fd7e14', '1': '#0d6efd', '2': '#198754'};
+            const spotData = {
+                {% for dir in constant('App\\Entity\\Spot::DIRECTIONS') %}
+                '{{ dir }}': {{ spot.getOrientationQuality(dir) ? spot.getOrientationQuality(dir).value : 'null' }}{{ not loop.last ? ',' : '' }}
+                {% endfor %}
+            };
+
+            const windBarsGroup = document.getElementById('windBars');
+            const cx = 150, cy = 150;
+            const maxRadius = 110;
+            const minRadius = 30;
+
+            dirs.forEach((dir, i) => {
+                const angle = angles[i];
+                const quality = spotData[dir];
+                const color = quality !== null ? colors[quality] : '#e9ecef';
+
+                const rad = (angle - 90) * Math.PI / 180;
+
+                // Barre radiale pour chaque direction
+                const barLength = minRadius + (maxRadius - minRadius) * 0.8; // 80% de la hauteur disponible
+                const x1 = cx + minRadius * Math.cos(rad);
+                const y1 = cy + minRadius * Math.sin(rad);
+                const x2 = cx + barLength * Math.cos(rad);
+                const y2 = cy + barLength * Math.sin(rad);
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                line.setAttribute('stroke', color);
+                line.setAttribute('stroke-width', '8');
+                line.setAttribute('stroke-linecap', 'round');
+                line.setAttribute('opacity', '0.8');
+                windBarsGroup.appendChild(line);
+
+                // Label direction
+                const labelRadius = maxRadius + 25;
+                const lx = cx + labelRadius * Math.cos(rad);
+                const ly = cy + labelRadius * Math.sin(rad);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', lx);
+                text.setAttribute('y', ly);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                const isMajor = ['n', 's', 'e', 'w'].includes(dir);
+                text.setAttribute('font-size', isMajor ? '16' : '10');
+                text.setAttribute('font-weight', isMajor ? 'bold' : 'normal');
+                text.setAttribute('fill', color);
+                text.setAttribute('font-weight', 'bold');
+                text.textContent = dir.toUpperCase();
+                windBarsGroup.appendChild(text);
+            });
+        });
+    </script>
+    <div class="col-md-6">
+        <h4>Infos</h4>
+        <p><strong>Marée:</strong> {{ spot.mareeDesc }}</p>
+        <p><strong>Foil:</strong> {% if spot.isFoil %}Oui{% else %}Non{% endif %}</p>
+        {{ spot.foilDesc ? spot.foilDesc|raw : '' }}
+        <p><strong>Vagues:</strong> {{ spot.waveDesc }}</p>
+        <p><strong>Distance Paris:</strong> {{ spot.distFromParis }} km</p>
+        {% if spot.windfinder or spot.webcam %}
+        <h5>Liens utiles</h5>
+        {% if spot.windfinder %}<a href="{{ spot.windfinder }}" target="_blank">Windfinder</a><br>{% endif %}
+        {% if spot.windguru %}<a href="{{ spot.windguru }}" target="_blank">Windguru</a><br>{% endif %}
+        {% if spot.webcam %}<a href="{{ spot.webcam }}" target="_blank">Webcam</a><br>{% endif %}
+        {% endif %}
+    </div>
+</div>
+{% if is_granted('ROLE_ADMIN') %}
+<div class="mt-4">
+    <a href="{{ path('spot_edit', {codeSpot: spot.codeSpot}) }}" class="btn btn-warning">Éditer</a>
+    <form action="{{ path('spot_delete', {codeSpot: spot.codeSpot}) }}" method="post" style="display: inline;" onsubmit="return confirm('Confirmer?')">
+        <input type="hidden" name="_token" value="{{ csrf_token('delete_' ~ spot.id) }}">
+        <button type="submit" class="btn btn-danger">Supprimer</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

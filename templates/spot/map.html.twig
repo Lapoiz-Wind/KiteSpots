@@ -1,0 +1,36 @@
+{% extends "base.html.twig" %}
+{% block content %}
+<h1>Carte des Spots</h1>
+<div id="map" style="height: 600px; border: 1px solid #ccc; margin-bottom: 20px;"></div>
+{% endblock %}
+
+{% block js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const map = L.map('map').setView([48, 2], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const spots = [
+        {% for spot in spots %}
+            {% if spot.lat and spot.long %}
+        {
+            nom: '{{ spot.nom|replace({"'": "\\'"}) }}',
+            lat: {{ spot.lat }},
+            lng: {{ spot.long }},
+            code: '{{ spot.codeSpot }}'
+        }{{ not loop.last ? ',' : '' }}
+            {% endif %}
+        {% endfor %}
+    ];
+
+    spots.forEach(function(s) {
+        L.marker([s.lat, s.lng]).addTo(map)
+            .bindPopup('<b>' + s.nom + '</b><br><a href="/spots/' + s.code + '">Détail</a>');
+    });
+});
+</script>
+{% endblock %}
+
+
