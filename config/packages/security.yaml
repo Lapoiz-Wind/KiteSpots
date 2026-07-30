@@ -1,14 +1,17 @@
 security:
     password_hashers:
-        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
-            algorithm: plaintext
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
     providers:
         users_in_memory:
             memory:
                 users:
                     admin:
-                        password: 'liberte'
+                        # Bcrypt hash of the admin password, generated with:
+                        #   php bin/console security:hash-password
+                        # Override ADMIN_PASSWORD_HASH in production with a hash of a strong,
+                        # secret password (never commit the production value).
+                        password: '%env(ADMIN_PASSWORD_HASH)%'
                         roles: ROLE_ADMIN
 
     firewalls:
