@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: kitespots
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: APP_SECRET
+        generateValue: true
+      # Set manually in the Render dashboard to your Neon connection string, e.g.:
+      # postgresql://<user>:<password>@<host>/<db>?serverVersion=16&charset=utf8&sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      # Set manually: bcrypt hash generated with `php bin/console security:hash-password`
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: TRUSTED_PROXIES
+        value: "0.0.0.0/0,::/0"
+      - key: MESSENGER_TRANSPORT_DSN
+        value: "doctrine://default?auto_setup=0"
+      - key: MAILER_DSN
+        value: "null://null"
