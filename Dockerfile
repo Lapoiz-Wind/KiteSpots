@@ -25,7 +25,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf \
-    && a2enmod rewrite
+    && a2enmod rewrite \
+    && printf '<Directory /var/www/html/public>\n\tAllowOverride All\n\tRequire all granted\n</Directory>\n' \
+        > /etc/apache2/conf-available/z-symfony.conf \
+    && a2enconf z-symfony
 
 # Recommended PHP/OPcache settings for production
 RUN { \
