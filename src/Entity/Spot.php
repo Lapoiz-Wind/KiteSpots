@@ -119,6 +119,18 @@ class Spot
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $maree = null;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $top = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $ok = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $warn = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $ko = null;
+
     /**
      * Qualité du vent par direction (clé = une valeur de self::DIRECTIONS, valeur = WindQuality::value ou null).
      *
@@ -565,6 +577,103 @@ class Spot
         }
 
         return $this;
+    }
+
+    public function getTop(): ?string
+    {
+        return $this->top;
+    }
+
+    public function setTop(?string $top): static
+    {
+        $this->top = $top;
+        return $this;
+    }
+
+    public function getOk(): ?string
+    {
+        return $this->ok;
+    }
+
+    public function setOk(?string $ok): static
+    {
+        $this->ok = $ok;
+        return $this;
+    }
+
+    public function getWarn(): ?string
+    {
+        return $this->warn;
+    }
+
+    public function setWarn(?string $warn): static
+    {
+        $this->warn = $warn;
+        return $this;
+    }
+
+    public function getKo(): ?string
+    {
+        return $this->ko;
+    }
+
+    public function setKo(?string $ko): static
+    {
+        $this->ko = $ko;
+        return $this;
+    }
+
+    public function getTidalConstraintsChart(): array
+    {
+        $constraints = [];
+        $ranges = [];
+
+        if ($this->top) {
+            $ranges[] = ['type' => 'top', 'value' => $this->top];
+        }
+        if ($this->ok) {
+            $ranges[] = ['type' => 'ok', 'value' => $this->ok];
+        }
+        if ($this->warn) {
+            $ranges[] = ['type' => 'warn', 'value' => $this->warn];
+        }
+        if ($this->ko) {
+            $ranges[] = ['type' => 'ko', 'value' => $this->ko];
+        }
+
+        $allNumbers = [];
+        foreach ($ranges as $range) {
+            preg_match('/(\d+\.?\d*)\s*->\s*(\d+\.?\d*)/', $range['value'], $matches);
+            if (!empty($matches)) {
+                $min = (float)$matches[1];
+                $max = (float)$matches[2];
+                $constraints[] = [
+                    'type' => $range['type'],
+                    'label' => $this->getConstraintLabel($range['type']),
+                    'min' => $min,
+                    'max' => $max,
+                    'value' => $range['value'],
+                ];
+                $allNumbers[] = $min;
+                $allNumbers[] = $max;
+            }
+        }
+
+        return [
+            'constraints' => $constraints,
+            'maxHeight' => !empty($allNumbers) ? ceil(max($allNumbers)) : 6,
+        ];
+    }
+
+    private function getConstraintLabel(string $type): string
+    {
+        return match ($type) {
+            'top' => 'Top',
+            'ok' => 'OK',
+            'warn' => 'Attention',
+            'ko' => 'Non praticable',
+            default => '',
+        };
     }
 
     public function __toString(): string

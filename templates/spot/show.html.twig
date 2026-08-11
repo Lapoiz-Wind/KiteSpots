@@ -1,119 +1,383 @@
 {% extends "base.html.twig" %}
+
 {% block content %}
-<h1>{{ spot.nom }}</h1>
-<p><strong>Région:</strong> {{ spot.region }} | <strong>Note:</strong> {{ spot.note }}</p>
-{{ spot.description|raw }}
-<hr>
-<div class="row mt-4">
-    <div class="col-md-6">
-        <h4>Orientation du vent</h4>
-        <div style="text-align: center;">
-            <svg id="windrose" width="300" height="300" style="margin: 20px auto; display: block;">
-                <!-- Cercle de base -->
-                <circle cx="150" cy="150" r="140" fill="none" stroke="#ddd" stroke-width="1"/>
-                <circle cx="150" cy="150" r="110" fill="none" stroke="#ddd" stroke-width="0.5" stroke-dasharray="5,5"/>
+<!-- En-tête avec Rose des Vents -->
+<div class="spot-detail-header-compact">
+    <div class="container">
+        <div class="spot-header-flex">
+            <div class="spot-header-content">
+                <h1>{{ spot.nom }}</h1>
 
-                <!-- Lignes cardinales majeures (N, E, S, W) -->
-                <line x1="150" y1="20" x2="150" y2="280" stroke="#999" stroke-width="2" opacity="0.3"/>
-                <line x1="20" y1="150" x2="280" y2="150" stroke="#999" stroke-width="2" opacity="0.3"/>
+                <!-- Badges région et note -->
+                <div class="spot-detail-meta">
+                    <span class="badge">📍 {{ spot.region }}</span>
+                    {% if spot.note %}
+                        <span class="rating-badge">⭐ {{ spot.note }}/5</span>
+                    {% endif %}
+                </div>
 
-                <!-- Directions intercalaires -->
-                <line x1="150" y1="20" x2="150" y2="280" stroke="none"/>
+                <!-- Détails compacts Conditions & Détails dans l'en-tête -->
+                <div class="spot-details-compact-header">
+                    {% if spot.mareeDesc %}
+                    <div class="detail-compact-item">
+                        <span class="detail-label">🌊</span>
+                        <div class="detail-content">
+                            <div class="detail-title">Marée</div>
+                            <div class="detail-value">{{ spot.mareeDesc|raw }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
 
-                <!-- Secteurs de vent (barres radialisées) -->
-                <g id="windBars"></g>
+                    {% if spot.waveDesc %}
+                    <div class="detail-compact-item">
+                        <span class="detail-label">🏄</span>
+                        <div class="detail-content">
+                            <div class="detail-title">Vagues</div>
+                            <div class="detail-value">{{ spot.waveDesc|raw }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
 
-                <!-- Aiguille nord -->
-                <g id="northArrow">
-                    <polygon points="150,80 145,100 155,100" fill="#d32f2f" opacity="0.7"/>
-                </g>
-            </svg>
+                    {% if spot.isFoil %}
+                    <div class="detail-compact-item">
+                        <span class="detail-label">🎯</span>
+                        <div class="detail-content">
+                            <div class="detail-title">Foil</div>
+                            <div class="detail-value">
+                                {% if spot.foilDesc %}{{ spot.foilDesc|raw }}{% else %}Compatible{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if spot.orientationDesc %}
+                    <div class="detail-compact-item">
+                        <span class="detail-label">📐</span>
+                        <div class="detail-content">
+                            <div class="detail-title">Orientation</div>
+                            <div class="detail-value">{{ spot.orientationDesc|raw }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if spot.isContraintEte %}
+                    <div class="detail-compact-item">
+                        <span class="detail-label">☀️</span>
+                        <div class="detail-content">
+                            <div class="detail-title">Contrainte Été</div>
+                            <div class="detail-value">
+                                {% if spot.contraintEteDesc %}{{ spot.contraintEteDesc|raw }}{% else %}Oui{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if spot.localisation %}
+                    <div class="detail-compact-item">
+                        <span class="detail-label">📍</span>
+                        <div class="detail-content">
+                            <div class="detail-title">Localisation</div>
+                            <div class="detail-value">{{ spot.localisation|raw }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Rose des Vents du Spot -->
+            <div class="spot-header-windrose">
+                <svg class="spot-header-rose" width="110" height="110" viewBox="0 0 110 110">
+                    <!-- Cercles de base -->
+                    <circle cx="55" cy="55" r="50" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+                    <circle cx="55" cy="55" r="37" fill="none" stroke="#f0f0f0" stroke-width="0.5" stroke-dasharray="2,2"/>
+
+                    <!-- Lignes cardinales -->
+                    <line x1="55" y1="5" x2="55" y2="105" stroke="#999" stroke-width="0.5" opacity="0.15"/>
+                    <line x1="5" y1="55" x2="105" y2="55" stroke="#999" stroke-width="0.5" opacity="0.15"/>
+
+                    <!-- Secteurs de vent -->
+                    <g class="spot-header-windrose-bars"></g>
+
+                    <!-- Aiguille nord -->
+                    <polygon points="55,28 53,35 57,35" fill="#d32f2f" opacity="0.8"/>
+
+                    <!-- Labels cardinaux directement sur le SVG -->
+                    <text x="55" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="#333">N</text>
+                    <text x="95" y="60" text-anchor="middle" font-size="10" font-weight="bold" fill="#333">E</text>
+                    <text x="55" y="105" text-anchor="middle" font-size="10" font-weight="bold" fill="#333">S</text>
+                    <text x="15" y="60" text-anchor="middle" font-size="10" font-weight="bold" fill="#333">W</text>
+                </svg>
+            </div>
         </div>
-        <p style="text-align: center; font-size: 12px;">🟢 TOP | 🔵 OK | 🟠 WARN | 🔴 KO</p>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const dirs = ['n', 'nne', 'ne', 'ene', 'e', 'ese', 'se', 'sse', 's', 'ssw', 'sw', 'wsw', 'w', 'wnw', 'nw', 'nnw'];
-            const angles = [0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5];
-            const colors = {'-1': '#dc3545', '0': '#fd7e14', '1': '#0d6efd', '2': '#198754'};
-            const spotData = {
-                {% for dir in constant('App\\Entity\\Spot::DIRECTIONS') %}
-                '{{ dir }}': {{ spot.getOrientationQuality(dir) ? spot.getOrientationQuality(dir).value : 'null' }}{{ not loop.last ? ',' : '' }}
-                {% endfor %}
-            };
+</div>
 
-            const windBarsGroup = document.getElementById('windBars');
-            const cx = 150, cy = 150;
-            const maxRadius = 110;
-            const minRadius = 30;
+<div class="container spot-detail-compact">
+    <!-- Contenu principal (pleine largeur maintenant) -->
+    <div class="spot-detail-content">
+        <!-- Description -->
+        {% if spot.description %}
+        <div class="content-section">
+            <h3>Description</h3>
+            <div class="spot-description-full">
+                {{ spot.description|raw }}
+            </div>
+        </div>
+        {% endif %}
 
-            dirs.forEach((dir, i) => {
-                const angle = angles[i];
-                const quality = spotData[dir];
-                const color = quality !== null ? colors[quality] : '#e9ecef';
+        <!-- Contraintes de Marée avec Graphique Compact -->
+        {% if spot.top or spot.ok or spot.warn or spot.ko %}
+        <div class="content-section">
+            <h3>🌊 Contraintes de Marée</h3>
 
-                const rad = (angle - 90) * Math.PI / 180;
+            {% set tidalChart = spot.tidalConstraintsChart %}
+            {% if tidalChart.constraints|length > 0 %}
+            <div class="tidal-compact-wrapper">
+                <!-- Graphique compact -->
+                <div class="tidal-chart-compact-container">
+                    <svg class="tidal-chart-compact" viewBox="0 0 250 300" preserveAspectRatio="xMidYMid meet">
+                        <!-- Background -->
+                        <rect width="250" height="300" fill="#fafbfc"/>
 
-                // Barre radiale pour chaque direction
-                const barLength = minRadius + (maxRadius - minRadius) * 0.8; // 80% de la hauteur disponible
-                const x1 = cx + minRadius * Math.cos(rad);
-                const y1 = cy + minRadius * Math.sin(rad);
-                const x2 = cx + barLength * Math.cos(rad);
-                const y2 = cy + barLength * Math.sin(rad);
+                        <!-- Grid lines -->
+                        {% for i in 0..4 %}
+                            {% set y = 270 - (i * 67.5) %}
+                            <line x1="35" y1="{{ y }}" x2="240" y2="{{ y }}" stroke="#e0e0e0" stroke-width="0.5" stroke-dasharray="1,1"/>
+                            <text x="30" y="{{ y + 3 }}" font-size="10" text-anchor="end" fill="#888">{{ (i * (tidalChart.maxHeight / 4))|round(1) }}</text>
+                        {% endfor %}
 
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line.setAttribute('x1', x1);
-                line.setAttribute('y1', y1);
-                line.setAttribute('x2', x2);
-                line.setAttribute('y2', y2);
-                line.setAttribute('stroke', color);
-                line.setAttribute('stroke-width', '8');
-                line.setAttribute('stroke-linecap', 'round');
-                line.setAttribute('opacity', '0.8');
-                windBarsGroup.appendChild(line);
+                        <!-- Y-axis -->
+                        <line x1="35" y1="20" x2="35" y2="270" stroke="#333" stroke-width="1.5"/>
+                        <!-- X-axis -->
+                        <line x1="35" y1="270" x2="240" y2="270" stroke="#333" stroke-width="1.5"/>
 
-                // Label direction
-                const labelRadius = maxRadius + 25;
-                const lx = cx + labelRadius * Math.cos(rad);
-                const ly = cy + labelRadius * Math.sin(rad);
+                        <!-- Y-axis label -->
+                        <text x="12" y="145" font-size="11" font-weight="bold" fill="#333" text-anchor="middle" transform="rotate(-90 12 145)">m</text>
 
-                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                text.setAttribute('x', lx);
-                text.setAttribute('y', ly);
-                text.setAttribute('text-anchor', 'middle');
-                text.setAttribute('dominant-baseline', 'middle');
-                const isMajor = ['n', 's', 'e', 'w'].includes(dir);
-                text.setAttribute('font-size', isMajor ? '16' : '10');
-                text.setAttribute('font-weight', isMajor ? 'bold' : 'normal');
-                text.setAttribute('fill', color);
-                text.setAttribute('font-weight', 'bold');
-                text.textContent = dir.toUpperCase();
-                windBarsGroup.appendChild(text);
-            });
-        });
-    </script>
-    <div class="col-md-6">
-        <h4>Infos</h4>
-        <p><strong>Marée:</strong> {{ spot.mareeDesc }}</p>
-        <p><strong>Foil:</strong> {% if spot.isFoil %}Oui{% else %}Non{% endif %}</p>
-        {{ spot.foilDesc ? spot.foilDesc|raw : '' }}
-        <p><strong>Vagues:</strong> {{ spot.waveDesc }}</p>
-        <p><strong>Distance Paris:</strong> {{ spot.distFromParis }} km</p>
-        {% if spot.windfinder or spot.webcam %}
-        <h5>Liens utiles</h5>
-        {% if spot.windfinder %}<a href="{{ spot.windfinder }}" target="_blank">Windfinder</a><br>{% endif %}
-        {% if spot.windguru %}<a href="{{ spot.windguru }}" target="_blank">Windguru</a><br>{% endif %}
-        {% if spot.webcam %}<a href="{{ spot.webcam }}" target="_blank">Webcam</a><br>{% endif %}
+                        <!-- Constraint zones -->
+                        {% for constraint in tidalChart.constraints %}
+                            {% set yMin = 270 - ((constraint.min / tidalChart.maxHeight) * 250) %}
+                            {% set yMax = 270 - ((constraint.max / tidalChart.maxHeight) * 250) %}
+                            {% set colorMap = {'top': '#d4edda', 'ok': '#d1ecf1', 'warn': '#fff3cd', 'ko': '#f8d7da'} %}
+                            {% set borderMap = {'top': '#28a745', 'ok': '#17a2b8', 'warn': '#ffc107', 'ko': '#dc3545'} %}
+
+                            <g class="tidal-zone-compact" data-type="{{ constraint.type }}">
+                                <!-- Zone rectangle -->
+                                <rect
+                                    x="35"
+                                    y="{{ yMax }}"
+                                    width="205"
+                                    height="{{ yMin - yMax }}"
+                                    fill="{{ colorMap[constraint.type] }}"
+                                    stroke="{{ borderMap[constraint.type] }}"
+                                    stroke-width="1.5"
+                                    opacity="0.8"/>
+
+                                <!-- Label inside zone -->
+                                {% if (yMin - yMax) > 20 %}
+                                <text
+                                    x="137.5"
+                                    y="{{ (yMin + yMax) / 2 + 4 }}"
+                                    font-size="9"
+                                    font-weight="bold"
+                                    text-anchor="middle"
+                                    fill="#333">
+                                    {{ constraint.label }}
+                                </text>
+                                {% endif %}
+                            </g>
+                        {% endfor %}
+
+                        <!-- Title -->
+                        <text x="137.5" y="15" font-size="11" font-weight="bold" text-anchor="middle" fill="#333">Marée</text>
+                    </svg>
+                </div>
+
+                <!-- Maree-consult card -->
+                <div class="tidal-maree-consult-card">
+                    {% if spot.maree %}
+                    <a href="{{ spot.maree }}" target="_blank" class="maree-consult-link" title="Horaires de marée">
+                        <img src="{{ asset('images/logos/maree-info.png') }}" alt="Marées" class="maree-consult-logo">
+                        <div class="maree-consult-text">
+                            <div class="maree-consult-title">Marées</div>
+                            <div class="maree-consult-desc">Horaires & hauteurs</div>
+                        </div>
+                        <div class="maree-consult-arrow">→</div>
+                    </a>
+                    {% endif %}
+
+                    <!-- Legend compact -->
+                    <div class="tidal-legend-compact">
+                        {% for constraint in tidalChart.constraints %}
+                            {% set colorMap = {'top': '#d4edda', 'ok': '#d1ecf1', 'warn': '#fff3cd', 'ko': '#f8d7da'} %}
+                            {% set borderMap = {'top': '#28a745', 'ok': '#17a2b8', 'warn': '#ffc107', 'ko': '#dc3545'} %}
+                            <div class="legend-item-compact">
+                                <span class="legend-color-compact" style="background-color: {{ colorMap[constraint.type] }}; border: 1px solid {{ borderMap[constraint.type] }};"></span>
+                                <div class="legend-compact-text">
+                                    <div class="legend-compact-label">{{ constraint.label }}</div>
+                                    <div class="legend-compact-value">{{ constraint.value }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p style="color: #999; text-align: center; padding: 2rem;">Aucune donnée de contrainte de marée disponible</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Accès depuis Paris -->
+        <div class="content-section">
+            <h3>🚗 Accès depuis Paris</h3>
+            <div class="access-info-compact">
+                <div class="access-item">
+                    <span>Distance :</span> <strong>{{ spot.distFromParis }} km</strong>
+                    {% if spot.distFromParisAutoroute %}<br><span>Autoroute :</span> <strong>{{ spot.distFromParisAutoroute }} km</strong>{% endif %}
+                </div>
+                {% if spot.timeFromParis %}
+                <div class="access-item">
+                    <span>Temps :</span> <strong>{{ spot.timeFromParis|formatTime }}</strong>
+                    {% if spot.peageFromParis %}<br><span>Péage :</span> <strong>{{ spot.peageFromParis }}</strong>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Ressources avec Logos -->
+        {% set hasLinks = spot.windfinder or spot.windguru or spot.meteoFrance or spot.webcam or spot.tempEau or spot.balise or spot.maree or spot.meteoConsult or spot.alloSurf %}
+        {% if hasLinks %}
+        <div class="content-section">
+            <h3>🔗 Ressources & Prévisions</h3>
+            <div class="resources-grid-logos">
+                {% if spot.windfinder %}
+                <a href="{{ spot.windfinder }}" target="_blank" class="resource-logo-card" title="Windfinder">
+                    <img src="{{ asset('images/logos/windfinder.png') }}" alt="Windfinder" class="resource-logo-img">
+                    <div class="resource-name">Windfinder</div>
+                    <div class="resource-desc">Prévisions</div>
+                </a>
+                {% endif %}
+
+                {% if spot.windguru %}
+                <a href="{{ spot.windguru }}" target="_blank" class="resource-logo-card" title="Windguru">
+                    <img src="{{ asset('images/logos/windguru.png') }}" alt="Windguru" class="resource-logo-img">
+                    <div class="resource-name">Windguru</div>
+                    <div class="resource-desc">Analyse</div>
+                </a>
+                {% endif %}
+
+                {% if spot.meteoFrance %}
+                <a href="{{ spot.meteoFrance }}" target="_blank" class="resource-logo-card" title="Météo-France">
+                    <img src="{{ asset('images/logos/meteo-france.png') }}" alt="Météo-France" class="resource-logo-img">
+                    <div class="resource-name">Météo-France</div>
+                    <div class="resource-desc">Officielle</div>
+                </a>
+                {% endif %}
+
+                {% if spot.meteoConsult %}
+                <a href="{{ spot.meteoConsult }}" target="_blank" class="resource-logo-card" title="Météoconsult">
+                    <img src="{{ asset('images/logos/meteoconsult.png') }}" alt="Météoconsult" class="resource-logo-img">
+                    <div class="resource-name">Météoconsult</div>
+                    <div class="resource-desc">Détaillée</div>
+                </a>
+                {% endif %}
+
+                {% if spot.alloSurf %}
+                <a href="{{ spot.alloSurf }}" target="_blank" class="resource-logo-card" title="AlloSurf">
+                    <img src="{{ asset('images/logos/allosurf.png') }}" alt="AlloSurf" class="resource-logo-img">
+                    <div class="resource-name">AlloSurf</div>
+                    <div class="resource-desc">Surf</div>
+                </a>
+                {% endif %}
+
+                {% if spot.webcam %}
+                <a href="{{ spot.webcam }}" target="_blank" class="resource-logo-card" title="Webcam">
+                    <img src="{{ asset('images/logos/webcame.png') }}" alt="Webcam" class="resource-logo-img">
+                    <div class="resource-name">Webcam</div>
+                    <div class="resource-desc">En direct</div>
+                </a>
+                {% endif %}
+
+                {% if spot.tempEau %}
+                <a href="{{ spot.tempEau }}" target="_blank" class="resource-logo-card" title="Température eau">
+                    <img src="{{ asset('images/logos/tempeau.png') }}" alt="Température" class="resource-logo-img">
+                    <div class="resource-name">Temp Eau</div>
+                    <div class="resource-desc">Temps réel</div>
+                </a>
+                {% endif %}
+
+                {% if spot.maree %}
+                <a href="{{ spot.maree }}" target="_blank" class="resource-logo-card" title="Marées">
+                    <img src="{{ asset('images/logos/maree-info.png') }}" alt="Marées" class="resource-logo-img">
+                    <div class="resource-name">Marées</div>
+                    <div class="resource-desc">Horaires</div>
+                </a>
+                {% endif %}
+            </div>
+        </div>
         {% endif %}
     </div>
+
+    <!-- Actions Admin en bas -->
+    {% if is_granted('ROLE_ADMIN') %}
+    <div class="admin-actions-compact">
+        <a href="{{ path('spot_edit', {codeSpot: spot.codeSpot}) }}" class="btn-admin">✏️ Éditer</a>
+        <form action="{{ path('spot_delete', {codeSpot: spot.codeSpot}) }}" method="post" onsubmit="return confirm('Confirmer ?');">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete_' ~ spot.id) }}">
+            <button type="submit" class="btn-admin danger">🗑️ Supprimer</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Bouton retour -->
+    <div class="mt-4">
+        <a href="{{ path('spot_index') }}" class="btn-back">← Retour à la liste</a>
+    </div>
 </div>
-{% if is_granted('ROLE_ADMIN') %}
-<div class="mt-4">
-    <a href="{{ path('spot_edit', {codeSpot: spot.codeSpot}) }}" class="btn btn-warning">Éditer</a>
-    <form action="{{ path('spot_delete', {codeSpot: spot.codeSpot}) }}" method="post" style="display: inline;" onsubmit="return confirm('Confirmer?')">
-        <input type="hidden" name="_token" value="{{ csrf_token('delete_' ~ spot.id) }}">
-        <button type="submit" class="btn btn-danger">Supprimer</button>
-    </form>
-</div>
-{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dirs = ['n', 'nne', 'ne', 'ene', 'e', 'ese', 'se', 'sse', 's', 'ssw', 'sw', 'wsw', 'w', 'wnw', 'nw', 'nnw'];
+    const angles = [0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5];
+    const colors = {'-1': '#dc3545', '0': '#fd7e14', '1': '#0d6efd', '2': '#198754'};
+
+    const spotData = {
+        {% for dir in constant('App\\Entity\\Spot::DIRECTIONS') %}
+        '{{ dir }}': {{ spot.getOrientationQuality(dir) ? spot.getOrientationQuality(dir).value : 'null' }}{{ not loop.last ? ',' : '' }}
+        {% endfor %}
+    };
+
+    const bars = document.querySelector('.spot-header-windrose-bars');
+    if (bars) {
+        const cx = 55, cy = 55;
+        const maxRadius = 48;
+        const minRadius = 18;
+
+        dirs.forEach((dir, i) => {
+            const angle = angles[i];
+            const quality = spotData[dir];
+            const color = quality !== null ? colors[quality] : '#f0f0f0';
+
+            const rad = (angle - 90) * Math.PI / 180;
+            const barLength = minRadius + (maxRadius - minRadius) * 0.8;
+            const x1 = cx + minRadius * Math.cos(rad);
+            const y1 = cy + minRadius * Math.sin(rad);
+            const x2 = cx + barLength * Math.cos(rad);
+            const y2 = cy + barLength * Math.sin(rad);
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('stroke', color);
+            line.setAttribute('stroke-width', '5');
+            line.setAttribute('stroke-linecap', 'round');
+            line.setAttribute('opacity', '0.85');
+            bars.appendChild(line);
+        });
+    }
+});
+</script>
 {% endblock %}

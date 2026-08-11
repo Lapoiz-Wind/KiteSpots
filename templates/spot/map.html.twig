@@ -1,36 +1,244 @@
 {% extends "base.html.twig" %}
-{% block content %}
-<h1>Carte des Spots</h1>
-<div id="map" style="height: 600px; border: 1px solid #ccc; margin-bottom: 20px;"></div>
-{% endblock %}
 
-{% block js %}
+{% block content %}
+<!-- En-tête avec filtre rose des vents -->
+<div class="map-header">
+    <div class="container">
+        <div class="map-header-flex">
+            <div class="map-header-content">
+                <h1>🗺️ Carte des Spots</h1>
+                <p>Explorez les spots de kitesurf en France</p>
+            </div>
+
+            <!-- Filtre Rose des Vents dans l'en-tête (petit) -->
+            <div class="map-header-filter">
+                <form method="GET" action="{{ path('spot_map') }}" id="mapFilterForm" class="map-filter-inline">
+                    <label class="map-filter-label">💨 Filtre vent</label>
+
+                    <svg class="windrose-filter-header" width="160" height="160" viewBox="0 0 280 280">
+                        <!-- Cercles de base -->
+                        <circle cx="140" cy="140" r="130" fill="none" stroke="#ddd" stroke-width="1"/>
+                        <circle cx="140" cy="140" r="95" fill="none" stroke="#ddd" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+                        <!-- Lignes cardinales -->
+                        <line x1="140" y1="10" x2="140" y2="270" stroke="#999" stroke-width="1" opacity="0.2"/>
+                        <line x1="10" y1="140" x2="270" y2="140" stroke="#999" stroke-width="1" opacity="0.2"/>
+
+                        <!-- Secteurs de vent (barres radiales) -->
+                        <g class="windrose-bars-header" id="windroseBarsHeader"></g>
+
+                        <!-- Aiguille nord -->
+                        <polygon points="140,80 137,95 143,95" fill="#d32f2f" opacity="0.8"/>
+                    </svg>
+
+                    <input type="hidden" id="windInputHeader" name="winds" value="{{ selectedWinds }}">
+
+                    <div class="map-filter-buttons-inline">
+                        <button type="submit" class="btn-filter-small">🔍</button>
+                        {% if selectedWinds %}
+                            <a href="{{ path('spot_map') }}" class="btn-filter-small reset">🔄</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if selectedWinds %}
+        <div class="map-filter-active-badge">
+            📍 Vent: <strong>{{ selectedWinds|upper }}</strong> (TOP/OK)
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="container map-container">
+    <!-- Carte -->
+    <div id="map" class="map-interactive"></div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ===== ROSE DES VENTS HEADER =====
+    const dirs = ['n', 'nne', 'ne', 'ene', 'e', 'ese', 'se', 'sse', 's', 'ssw', 'sw', 'wsw', 'w', 'wnw', 'nw', 'nnw'];
+    const angles = [0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5];
+    const colors = {'-1': '#dc3545', '0': '#fd7e14', '1': '#0d6efd', '2': '#198754'};
+
+    function drawWindroseHeader() {
+        const windroseBars = document.getElementById('windroseBarsHeader');
+        if (!windroseBars) return;
+
+        const cx = 140, cy = 140;
+        const maxRadius = 125;
+        const minRadius = 40;
+
+        dirs.forEach((dir, i) => {
+            const angle = angles[i];
+            const rad = (angle - 90) * Math.PI / 180;
+
+            const barLength = minRadius + (maxRadius - minRadius) * 0.7;
+            const x1 = cx + minRadius * Math.cos(rad);
+            const y1 = cy + minRadius * Math.sin(rad);
+            const x2 = cx + barLength * Math.cos(rad);
+            const y2 = cy + barLength * Math.sin(rad);
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('stroke', '#c0c0c0');
+            line.setAttribute('stroke-width', '7');
+            line.setAttribute('stroke-linecap', 'round');
+            line.setAttribute('opacity', '0.6');
+            line.setAttribute('class', 'windrose-segment-header');
+            line.setAttribute('data-direction', dir);
+            line.style.cursor = 'pointer';
+            line.style.transition = 'all 0.2s';
+
+            line.addEventListener('click', function(e) {
+                e.preventDefault();
+                selectWindDirectionHeaderMulti(dir, line);
+            });
+
+            line.addEventListener('mouseover', function() {
+                this.setAttribute('stroke-width', '9');
+                this.setAttribute('opacity', '0.8');
+            });
+
+            line.addEventListener('mouseout', function() {
+                const selected = getSelectedWinds();
+                if (!selected.includes(dir)) {
+                    this.setAttribute('stroke-width', '7');
+                    this.setAttribute('opacity', '0.6');
+                }
+            });
+
+            windroseBars.appendChild(line);
+
+            // Label direction (petit)
+            const labelRadius = maxRadius + 20;
+            const lx = cx + labelRadius * Math.cos(rad);
+            const ly = cy + labelRadius * Math.sin(rad);
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', lx);
+            text.setAttribute('y', ly);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'middle');
+            const isMajor = ['n', 's', 'e', 'w'].includes(dir);
+            text.setAttribute('font-size', isMajor ? '12' : '8');
+            text.setAttribute('font-weight', isMajor ? 'bold' : 'normal');
+            text.setAttribute('fill', '#555');
+            text.textContent = dir.toUpperCase();
+            windroseBars.appendChild(text);
+        });
+
+        updateSelectedWindDirectionHeader();
+    }
+
+    function getSelectedWinds() {
+        const windInput = document.getElementById('windInputHeader');
+        const value = windInput.value.trim();
+        return value ? value.split(',') : [];
+    }
+
+    function selectWindDirectionHeaderMulti(dir, element) {
+        const selected = getSelectedWinds();
+        const index = selected.indexOf(dir);
+
+        if (index > -1) {
+            selected.splice(index, 1);
+        } else {
+            selected.push(dir);
+        }
+
+        document.getElementById('windInputHeader').value = selected.join(',');
+        updateSelectedWindDirectionHeader();
+    }
+
+    function updateSelectedWindDirectionHeader() {
+        const selected = getSelectedWinds();
+        const segments = document.querySelectorAll('.windrose-segment-header');
+
+        segments.forEach(seg => {
+            if (selected.includes(seg.getAttribute('data-direction'))) {
+                seg.setAttribute('stroke', '#0066cc');
+                seg.setAttribute('stroke-width', '9');
+                seg.setAttribute('opacity', '0.9');
+            } else {
+                seg.setAttribute('stroke', '#c0c0c0');
+                seg.setAttribute('stroke-width', '7');
+                seg.setAttribute('opacity', '0.6');
+            }
+        });
+    }
+
+    // ===== CARTE LEAFLET =====
     const map = L.map('map').setView([48, 2], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    const spots = [
+    const spotsData = {
         {% for spot in spots %}
             {% if spot.lat and spot.long %}
-        {
+        '{{ spot.codeSpot }}': {
             nom: '{{ spot.nom|replace({"'": "\\'"}) }}',
             lat: {{ spot.lat }},
             lng: {{ spot.long }},
-            code: '{{ spot.codeSpot }}'
+            code: '{{ spot.codeSpot }}',
+            region: '{{ spot.region }}',
+            note: '{{ spot.note }}',
+            wind: {
+                {% for dir in constant('App\\Entity\\Spot::DIRECTIONS') %}
+                '{{ dir }}': {{ spot.getOrientationQuality(dir) ? spot.getOrientationQuality(dir).value : 'null' }}{{ not loop.last ? ',' : '' }}
+                {% endfor %}
+            }
         }{{ not loop.last ? ',' : '' }}
             {% endif %}
         {% endfor %}
-    ];
+    };
 
-    spots.forEach(function(s) {
-        L.marker([s.lat, s.lng]).addTo(map)
-            .bindPopup('<b>' + s.nom + '</b><br><a href="/spots/' + s.code + '">Détail</a>');
+    const markers = {};
+    const selectedWinds = '{{ selectedWinds }}'.split(',').filter(w => w.trim());
+
+    // Créer les marqueurs
+    Object.keys(spotsData).forEach(code => {
+        const spot = spotsData[code];
+
+        // Filtrer si au moins une orientation sélectionnée est OK ou TOP
+        let shouldShow = true;
+        if (selectedWinds.length > 0) {
+            shouldShow = selectedWinds.some(wind =>
+                spot.wind[wind] === 1 || spot.wind[wind] === 2
+            );
+        }
+
+        const marker = L.marker([spot.lat, spot.lng], {
+            visible: shouldShow
+        }).addTo(map);
+
+        const popupContent = `
+            <div class="map-popup">
+                <b>${spot.nom}</b><br>
+                <small>📍 ${spot.region}</small><br>
+                ${spot.note ? `<small>⭐ ${spot.note}/5</small><br>` : ''}
+                <a href="/spots/${spot.code}">→ Voir le détail</a>
+            </div>
+        `;
+
+        marker.bindPopup(popupContent);
+
+        if (!shouldShow) {
+            map.removeLayer(marker);
+        }
+
+        markers[code] = marker;
     });
+
+    // Initialiser la rose des vents
+    drawWindroseHeader();
 });
 </script>
+
 {% endblock %}
-
-

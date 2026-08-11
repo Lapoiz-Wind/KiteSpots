@@ -1,8 +1,504 @@
 {% extends "base.html.twig" %}
+
 {% block content %}
-<h1>{% if spot.id %}Éditer{% else %}Nouveau{% endif %} Spot</h1>
-{{ form_start(form) }}
-{{ form_widget(form) }}
-<button class="btn btn-primary mt-3">Enregistrer</button>
-{{ form_end(form) }}
+<div class="form-page">
+    <!-- En-tête -->
+    <div class="form-header">
+        <div class="container">
+            <h1>{% if spot.id %}✏️ Éditer le spot{% else %}➕ Créer un nouveau spot{% endif %}</h1>
+            <p class="form-subtitle">Remplissez les informations ci-dessous pour {{ spot.id ? 'mettre à jour' : 'créer' }} le spot</p>
+        </div>
+    </div>
+
+    <div class="container form-container">
+        <div class="form-wrapper">
+            {{ form_start(form, {'attr': {'class': 'spot-form', 'novalidate': true}}) }}
+
+            <!-- Section 1: Informations Générales -->
+            <div class="form-section">
+                <h2 class="form-section-title">📍 Informations Générales</h2>
+                <div class="form-section-grid">
+                    <div class="form-group">
+                        {{ form_label(form.nom) }}
+                        {{ form_widget(form.nom, {'attr': {'class': 'form-control', 'placeholder': 'Ex: Île de Ré'}}) }}
+                        {{ form_errors(form.nom) }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form_label(form.region) }}
+                        {{ form_widget(form.region, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_errors(form.region) }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form_label(form.codeSpot) }}
+                        {{ form_widget(form.codeSpot, {'attr': {'class': 'form-control', 'placeholder': 'Code unique'}}) }}
+                        <small class="form-text">Identifiant unique du spot</small>
+                        {{ form_errors(form.codeSpot) }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form_label(form.note) }}
+                        {{ form_widget(form.note, {'attr': {'class': 'form-control', 'type': 'number', 'min': 0, 'max': 5, 'step': 0.1}}) }}
+                        <small class="form-text">Note globale de 0 à 5</small>
+                        {{ form_errors(form.note) }}
+                    </div>
+                </div>
+
+                <!-- Localisation GPS -->
+                <div class="form-subsection">
+                    <h3>📌 Localisation GPS</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form_label(form.lat, 'Latitude') }}
+                            {{ form_widget(form.lat, {'attr': {'class': 'form-control', 'placeholder': '48.123'}}) }}
+                            {{ form_errors(form.lat) }}
+                        </div>
+                        <div class="form-group">
+                            {{ form_label(form.long, 'Longitude') }}
+                            {{ form_widget(form.long, {'attr': {'class': 'form-control', 'placeholder': '2.123'}}) }}
+                            {{ form_errors(form.long) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Description -->
+            <div class="form-section">
+                <h2 class="form-section-title">📝 Description</h2>
+
+                <div class="form-group">
+                    {{ form_label(form.shortDescription) }}
+                    {{ form_widget(form.shortDescription, {'attr': {'class': 'form-control', 'rows': 2, 'placeholder': 'Description courte du spot', 'maxlength': 200}}) }}
+                    <small class="form-text">Maximum 200 caractères</small>
+                    {{ form_errors(form.shortDescription) }}
+                </div>
+
+                <div class="form-group">
+                    {{ form_label(form.description) }}
+                    {{ form_widget(form.description, {'attr': {'class': 'form-control', 'rows': 6, 'placeholder': 'Description détaillée du spot'}}) }}
+                    <small class="form-text">Vous pouvez utiliser du HTML basique</small>
+                    {{ form_errors(form.description) }}
+                </div>
+            </div>
+
+            <!-- Section 3: Conditions -->
+            <div class="form-section">
+                <h2 class="form-section-title">🌊 Conditions de Spot</h2>
+
+                <div class="form-subsection">
+                    <h3>Conditions Physiques</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form_label(form.mareeDesc, 'Description Marée') }}
+                            {{ form_widget(form.mareeDesc, {'attr': {'class': 'form-control', 'placeholder': 'Ex: Bon à marée haute'}}) }}
+                            {{ form_errors(form.mareeDesc) }}
+                        </div>
+                        <div class="form-group">
+                            {{ form_label(form.waveDesc, 'Description Vagues') }}
+                            {{ form_widget(form.waveDesc, {'attr': {'class': 'form-control', 'placeholder': 'Ex: 1-3 mètres'}}) }}
+                            {{ form_errors(form.waveDesc) }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-subsection">
+                    <h3>Caractéristiques Spéciales</h3>
+                    <div class="form-checkbox-group">
+                        <label class="checkbox-label">
+                            {{ form_widget(form.isFoil) }}
+                            <span>🎯 Compatible Foil</span>
+                            <small class="checkbox-hint">Le spot permet de faire du foil</small>
+                        </label>
+                        <label class="checkbox-label">
+                            {{ form_widget(form.isContraintEte) }}
+                            <span>☀️ Contrainte en été</span>
+                            <small class="checkbox-hint">Le spot a des restrictions en été</small>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-subsection">
+                    <h3>Descriptions Complémentaires</h3>
+                    <div class="form-group">
+                        {{ form_label(form.foilDesc) }}
+                        {{ form_widget(form.foilDesc, {'attr': {'class': 'form-control', 'placeholder': 'Détails sur les conditions de foil'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.contraintEteDesc) }}
+                        {{ form_widget(form.contraintEteDesc, {'attr': {'class': 'form-control', 'placeholder': 'Détails sur les contraintes estivales'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.orientationDesc) }}
+                        {{ form_widget(form.orientationDesc, {'attr': {'class': 'form-control', 'placeholder': 'Ex: Orienté nord-ouest'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.localisation) }}
+                        {{ form_widget(form.localisation, {'attr': {'class': 'form-control', 'placeholder': 'Description de la localisation'}}) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Ressources & Prévisions -->
+            <div class="form-section">
+                <h2 class="form-section-title">🔗 Ressources & Prévisions</h2>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        {{ form_label(form.windfinder) }}
+                        {{ form_widget(form.windfinder, {'attr': {'class': 'form-control', 'placeholder': 'URL Windfinder', 'type': 'url'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.windguru) }}
+                        {{ form_widget(form.windguru, {'attr': {'class': 'form-control', 'placeholder': 'URL Windguru', 'type': 'url'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.meteoFrance) }}
+                        {{ form_widget(form.meteoFrance, {'attr': {'class': 'form-control', 'placeholder': 'URL Météo-France', 'type': 'url'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.meteoConsult) }}
+                        {{ form_widget(form.meteoConsult, {'attr': {'class': 'form-control', 'placeholder': 'URL Météoconsult', 'type': 'url'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.maree) }}
+                        {{ form_widget(form.maree, {'attr': {'class': 'form-control', 'placeholder': 'URL Marées', 'type': 'url'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.alloSurf) }}
+                        {{ form_widget(form.alloSurf, {'attr': {'class': 'form-control', 'placeholder': 'URL AlloSurf', 'type': 'url'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.webcam) }}
+                        {{ form_widget(form.webcam, {'attr': {'class': 'form-control', 'placeholder': 'URL Webcam', 'type': 'url'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.tempEau) }}
+                        {{ form_widget(form.tempEau, {'attr': {'class': 'form-control', 'placeholder': 'URL Température eau', 'type': 'url'}}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.balise) }}
+                        {{ form_widget(form.balise, {'attr': {'class': 'form-control', 'placeholder': 'URL Balise', 'type': 'url'}}) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Accès depuis Paris -->
+            <div class="form-section">
+                <h2 class="form-section-title">🚗 Accès depuis Paris</h2>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form_label(form.distFromParis) }}
+                        {{ form_widget(form.distFromParis, {'attr': {'class': 'form-control', 'type': 'number', 'placeholder': '500'}}) }}
+                        <small class="form-text">en kilomètres</small>
+                        {{ form_errors(form.distFromParis) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.timeFromParis) }}
+                        {{ form_widget(form.timeFromParis, {'attr': {'class': 'form-control', 'placeholder': 'Ex: 4h30'}}) }}
+                        {{ form_errors(form.timeFromParis) }}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form_label(form.distFromParisAutoroute) }}
+                        {{ form_widget(form.distFromParisAutoroute, {'attr': {'class': 'form-control', 'type': 'number', 'placeholder': '450'}}) }}
+                        <small class="form-text">en kilomètres (autoroute)</small>
+                    </div>
+                    <div class="form-group">
+                        {{ form_label(form.peageFromParis) }}
+                        {{ form_widget(form.peageFromParis, {'attr': {'class': 'form-control', 'placeholder': 'Ex: 45€'}}) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    {% if spot.id %}✅ Mettre à jour le spot{% else %}✅ Créer le spot{% endif %}
+                </button>
+                <a href="{{ path('spot_index') }}" class="btn btn-secondary btn-lg">
+                    ✕ Annuler
+                </a>
+            </div>
+
+            {{ form_end(form) }}
+        </div>
+    </div>
+</div>
+
+<style>
+/* Form Styling */
+.form-page {
+    background: linear-gradient(to bottom, #f8f9fa, #fafbfc);
+    padding-bottom: 3rem;
+    min-height: 100vh;
+}
+
+.form-header {
+    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    color: white;
+    padding: 2.5rem 0;
+    margin-bottom: 2.5rem;
+}
+
+.form-header h1 {
+    margin-bottom: 0.5rem;
+    color: white;
+    font-size: 2rem;
+}
+
+.form-subtitle {
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+.form-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.form-wrapper {
+    background: white;
+    border-radius: 12px;
+    padding: 2.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.form-section {
+    margin-bottom: 2.5rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.form-section-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid #0066cc;
+    display: flex;
+    align-items: center;
+}
+
+.form-subsection {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 3px solid #0066cc;
+}
+
+.form-subsection h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 1rem;
+    margin-top: 0;
+}
+
+.form-section-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.form-control {
+    padding: 0.875rem;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.form-control:hover {
+    border-color: #b0b0b0;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    background-color: #fafbfc;
+}
+
+.form-text {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.3rem;
+}
+
+.form-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    padding: 1rem;
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.checkbox-label:hover {
+    background: #f8f9fa;
+    border-color: #0066cc;
+}
+
+.checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: #0066cc;
+    flex-shrink: 0;
+}
+
+.checkbox-label span {
+    font-weight: 600;
+    color: #222;
+}
+
+.checkbox-hint {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: normal;
+    margin-top: 0.2rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid #e0e0e0;
+}
+
+.btn-lg {
+    padding: 0.95rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 102, 204, 0.3);
+}
+
+.btn-secondary {
+    background: white;
+    color: #333;
+    border: 2px solid #dee2e6;
+}
+
+.btn-secondary:hover {
+    background: #f8f9fa;
+    border-color: #0066cc;
+    color: #0066cc;
+}
+
+/* Form Errors */
+.form-group .form_error {
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 0.3rem;
+    font-weight: 600;
+}
+
+.form-group.form_has_errors {
+    margin-bottom: 1.25rem;
+}
+
+.form-group.form_has_errors .form-control {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .form-wrapper {
+        padding: 1.5rem;
+    }
+
+    .form-section-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn-lg {
+        width: 100%;
+    }
+
+    .form-header {
+        padding: 1.5rem 0;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-header h1 {
+        font-size: 1.5rem;
+    }
+}
+</style>
 {% endblock %}

@@ -16,18 +16,67 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class SpotController extends AbstractController
 {
     #[Route('/', name: 'spot_index')]
-    public function index(SpotRepository $repo): Response
+    public function index(Request $request, SpotRepository $repo): Response
     {
+        $spots = $repo->findAllOrderedByRegionAndNom();
+        $selectedRegion = $request->query->get('region');
+        $selectedWinds = $request->query->get('winds');
+        $searchQuery = $request->query->get('search');
+
+        if ($selectedRegion) {
+            $spots = array_filter($spots, fn($s) => $s->getCodeRegion() === $selectedRegion);
+        }
+
+        if ($selectedWinds) {
+            $winds = array_filter(explode(',', $selectedWinds));
+            $spots = array_filter($spots, function($s) use ($winds) {
+                foreach ($winds as $wind) {
+                    $quality = $s->getOrientationQuality($wind);
+                    if ($quality && ($quality === WindQuality::TOP || $quality === WindQuality::OK)) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+
+        if ($searchQuery) {
+            $query = strtolower($searchQuery);
+            $spots = array_filter($spots, fn($s) =>
+                strpos(strtolower($s->getNom()), $query) !== false ||
+                strpos(strtolower($s->getRegion()), $query) !== false
+            );
+        }
+
+        // Tri par note (descendant)
+        usort($spots, function($a, $b) {
+            $noteA = $a->getNote() ?? 0;
+            $noteB = $b->getNote() ?? 0;
+            return $noteB <=> $noteA;
+        });
+
+        $regions = array_unique(array_filter(array_map(fn($s) => $s->getCodeRegion(), $repo->findAllOrderedByRegionAndNom())));
+        sort($regions);
+
         return $this->render('spot/index.html.twig', [
-            'spots' => $repo->findAllOrderedByRegionAndNom(),
+            'spots' => array_values($spots),
+            'regions' => $regions,
+            'directions' => Spot::DIRECTIONS,
+            'selectedRegion' => $selectedRegion,
+            'selectedWinds' => $selectedWinds,
+            'searchQuery' => $searchQuery,
         ]);
     }
 
     #[Route('/carte', name: 'spot_map')]
-    public function map(SpotRepository $repo): Response
+    public function map(Request $request, SpotRepository $repo): Response
     {
+        $selectedWinds = $request->query->get('winds');
+
         return $this->render('spot/map.html.twig', [
             'spots' => $repo->findAllOrderedByRegionAndNom(),
+            'directions' => Spot::DIRECTIONS,
+            'selectedWinds' => $selectedWinds,
         ]);
     }
 

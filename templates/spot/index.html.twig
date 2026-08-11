@@ -1,21 +1,381 @@
 {% extends "base.html.twig" %}
+
 {% block content %}
-<h1>Spots de Kitesurf</h1>
-<div class="row">
-{% for spot in spots %}
-    <div class="col-md-6 col-lg-4 mb-3">
-        <div class="card">
-            <div class="card-body">
-                <h5>{{ spot.nom }}</h5>
-                <p class="text-muted">{{ spot.region }}</p>
-                <p>{{ spot.shortDescription|slice(0, 100) }}...</p>
-                <a href="{{ path('spot_show', {codeSpot: spot.codeSpot}) }}" class="btn btn-sm btn-primary">Voir</a>
-                {% if is_granted('ROLE_ADMIN') %}
-                    <a href="{{ path('spot_edit', {codeSpot: spot.codeSpot}) }}" class="btn btn-sm btn-warning">Éditer</a>
+<div class="hero-section">
+    <div class="container">
+        <h1>🪁 Spots de Kitesurf en France</h1>
+        <p>Trouvez le spot parfait selon vos conditions préférées</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Filtres -->
+    <div class="filters-section">
+        <form method="GET" action="{{ path('spot_index') }}" id="filterForm">
+            <h5>⚙️ Filtrer les spots</h5>
+
+            <div class="row">
+                <!-- Recherche -->
+                <div class="col-md-6 col-lg-3">
+                    <div class="filter-group">
+                        <label for="search">🔍 Rechercher</label>
+                        <input
+                            type="text"
+                            id="search"
+                            name="search"
+                            placeholder="Nom ou région..."
+                            value="{{ searchQuery }}"
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+
+                <!-- Région -->
+                <div class="col-md-6 col-lg-3">
+                    <div class="filter-group">
+                        <label for="region">📍 Région</label>
+                        <select id="region" name="region">
+                            <option value="">Toutes les régions</option>
+                            {% for reg in regions %}
+                                <option value="{{ reg }}" {% if reg == selectedRegion %}selected{% endif %}>
+                                    {{ reg }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Orientation du vent - Rose des vents -->
+                <div class="col-md-12 col-lg-6">
+                    <div class="filter-group">
+                        <label>💨 Orientation du vent</label>
+                        <div class="windrose-filter-container">
+                            <svg class="windrose-filter" width="240" height="240" viewBox="0 0 240 240">
+                                <!-- Cercles de base -->
+                                <circle cx="120" cy="120" r="110" fill="none" stroke="#ddd" stroke-width="1"/>
+                                <circle cx="120" cy="120" r="80" fill="none" stroke="#ddd" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+                                <!-- Lignes cardinales -->
+                                <line x1="120" y1="10" x2="120" y2="230" stroke="#999" stroke-width="1" opacity="0.2"/>
+                                <line x1="10" y1="120" x2="230" y2="120" stroke="#999" stroke-width="1" opacity="0.2"/>
+
+                                <!-- Secteurs de vent (barres radiales) -->
+                                <g class="windrose-bars" id="windroseBars"></g>
+
+                                <!-- Aiguille nord -->
+                                <polygon points="120,65 117,75 123,75" fill="#d32f2f" opacity="0.8"/>
+                            </svg>
+                            <input type="hidden" id="windInput" name="winds" value="{{ selectedWinds }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-buttons">
+                <button type="submit" class="btn-primary">🔎 Appliquer les filtres</button>
+                {% if selectedRegion or selectedWinds or searchQuery %}
+                    <a href="{{ path('spot_index') }}" class="btn-secondary">🔄 Réinitialiser</a>
                 {% endif %}
             </div>
-        </div>
+        </form>
     </div>
-{% endfor %}
+
+    <!-- Grille de spots -->
+    {% if spots|length > 0 %}
+        <div class="spots-grid">
+            {% for spot in spots %}
+                <div class="spot-card">
+                    <div class="spot-card-header">
+                        <a href="{{ path('spot_show', {codeSpot: spot.codeSpot}) }}" class="spot-card-title">
+                            {{ spot.nom }}
+                        </a>
+                        <span class="spot-card-region">{{ spot.region }}</span>
+                    </div>
+
+                    <div class="spot-card-body">
+                        <!-- Description -->
+                        {% if spot.shortDescription %}
+                            <p class="spot-description">{{ spot.shortDescription }}</p>
+                        {% endif %}
+
+                        <!-- Badges de caractéristiques -->
+                        <div class="spot-features">
+                            {% if spot.isFoil %}
+                                <span class="feature-badge foil">🎯 Foil</span>
+                            {% endif %}
+                            {% if spot.isContraintEte %}
+                                <span class="feature-badge constraint">☀️ Contrainte Été</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Note/Rating -->
+                        {% if spot.note %}
+                            <div class="spot-rating">
+                                <span class="rating-stars">★★★★★</span>
+                                <span class="rating-value">{{ spot.note }}/5</span>
+                            </div>
+                        {% endif %}
+
+                        <!-- Mini Rose des Vents -->
+                        <div class="spot-windrose-container">
+                            <svg class="spot-windrose" width="140" height="140" viewBox="0 0 140 140" data-spot-code="{{ spot.codeSpot }}">
+                                <!-- Cercle de base -->
+                                <circle cx="70" cy="70" r="65" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+                                <circle cx="70" cy="70" r="50" fill="none" stroke="#f0f0f0" stroke-width="0.5" stroke-dasharray="2,2"/>
+
+                                <!-- Lignes cardinales -->
+                                <line x1="70" y1="5" x2="70" y2="135" stroke="#999" stroke-width="0.5" opacity="0.15"/>
+                                <line x1="5" y1="70" x2="135" y2="70" stroke="#999" stroke-width="0.5" opacity="0.15"/>
+
+                                <!-- Secteurs de vent -->
+                                <g class="spot-windrose-bars"></g>
+
+                                <!-- Aiguille nord -->
+                                <polygon points="70,40 68,48 72,48" fill="#d32f2f" opacity="0.7"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="spot-card-actions">
+                        <a href="{{ path('spot_show', {codeSpot: spot.codeSpot}) }}" class="btn-primary">
+                            📖 Voir plus
+                        </a>
+                        {% if is_granted('ROLE_ADMIN') %}
+                            <a href="{{ path('spot_edit', {codeSpot: spot.codeSpot}) }}" class="btn-warning">
+                                ✏️ Éditer
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🏜️</div>
+            <div class="empty-state-title">Aucun spot trouvé</div>
+            <div class="empty-state-text">
+                {% if selectedRegion or selectedWinds or searchQuery %}
+                    Essayez de modifier vos filtres
+                {% else %}
+                    Aucun spot disponible pour le moment
+                {% endif %}
+            </div>
+            {% if selectedRegion or selectedWinds or searchQuery %}
+                <a href="{{ path('spot_index') }}" class="btn btn-primary">🔄 Réinitialiser les filtres</a>
+            {% endif %}
+        </div>
+    {% endif %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Données des directions
+    const dirs = ['n', 'nne', 'ne', 'ene', 'e', 'ese', 'se', 'sse', 's', 'ssw', 'sw', 'wsw', 'w', 'wnw', 'nw', 'nnw'];
+    const angles = [0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5];
+    const colors = {'-1': '#dc3545', '0': '#fd7e14', '1': '#0d6efd', '2': '#198754'};
+
+    // ===== ROSE DES VENTS DU FILTRE =====
+    function drawWindroseFilter() {
+        const windroseBars = document.getElementById('windroseBars');
+        if (!windroseBars) return;
+
+        // Récupérer les données de qualité pour chaque direction (moyenne globale)
+        // Pour le filtre, on va afficher toutes les directions avec une teinte grise neutre
+        const cx = 120, cy = 120;
+        const maxRadius = 105;
+        const minRadius = 30;
+
+        dirs.forEach((dir, i) => {
+            const angle = angles[i];
+            const rad = (angle - 90) * Math.PI / 180;
+
+            // Barre radiale
+            const barLength = minRadius + (maxRadius - minRadius) * 0.7;
+            const x1 = cx + minRadius * Math.cos(rad);
+            const y1 = cy + minRadius * Math.sin(rad);
+            const x2 = cx + barLength * Math.cos(rad);
+            const y2 = cy + barLength * Math.sin(rad);
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('stroke', '#c0c0c0');
+            line.setAttribute('stroke-width', '6');
+            line.setAttribute('stroke-linecap', 'round');
+            line.setAttribute('opacity', '0.6');
+            line.setAttribute('class', 'windrose-segment');
+            line.setAttribute('data-direction', dir);
+            line.style.cursor = 'pointer';
+            line.style.transition = 'all 0.2s';
+
+            line.addEventListener('click', function(e) {
+                e.preventDefault();
+                selectWindDirection(dir, line);
+            });
+
+            line.addEventListener('mouseover', function() {
+                this.setAttribute('stroke-width', '8');
+                this.setAttribute('opacity', '0.8');
+            });
+
+            line.addEventListener('mouseout', function() {
+                const windInput = document.getElementById('windInput');
+                const selected = windInput.value.trim() ? windInput.value.split(',') : [];
+                if (!selected.includes(dir)) {
+                    this.setAttribute('stroke-width', '6');
+                    this.setAttribute('opacity', '0.6');
+                }
+            });
+
+            windroseBars.appendChild(line);
+
+            // Label direction
+            const labelRadius = maxRadius + 20;
+            const lx = cx + labelRadius * Math.cos(rad);
+            const ly = cy + labelRadius * Math.sin(rad);
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', lx);
+            text.setAttribute('y', ly);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'middle');
+            const isMajor = ['n', 's', 'e', 'w'].includes(dir);
+            text.setAttribute('font-size', isMajor ? '14' : '10');
+            text.setAttribute('font-weight', isMajor ? 'bold' : 'normal');
+            text.setAttribute('fill', '#555');
+            text.textContent = dir.toUpperCase();
+            windroseBars.appendChild(text);
+        });
+
+        // Mettre à jour visuellement la direction sélectionnée
+        updateSelectedWindDirection();
+    }
+
+    function selectWindDirection(dir, element) {
+        const windInput = document.getElementById('windInput');
+        const selected = windInput.value.trim() ? windInput.value.split(',') : [];
+        const index = selected.indexOf(dir);
+
+        if (index > -1) {
+            selected.splice(index, 1);
+        } else {
+            selected.push(dir);
+        }
+
+        windInput.value = selected.join(',');
+        updateSelectedWindDirection();
+    }
+
+    function updateSelectedWindDirection() {
+        const windInput = document.getElementById('windInput');
+        const selected = windInput.value.trim() ? windInput.value.split(',') : [];
+        const segments = document.querySelectorAll('.windrose-segment');
+
+        segments.forEach(seg => {
+            if (selected.includes(seg.getAttribute('data-direction'))) {
+                seg.setAttribute('stroke', '#0066cc');
+                seg.setAttribute('stroke-width', '8');
+                seg.setAttribute('opacity', '0.9');
+            } else {
+                seg.setAttribute('stroke', '#c0c0c0');
+                seg.setAttribute('stroke-width', '6');
+                seg.setAttribute('opacity', '0.6');
+            }
+        });
+    }
+
+    // ===== MINI ROSES DES VENTS DES SPOTS =====
+    function drawSpotWindroses() {
+        document.querySelectorAll('.spot-windrose').forEach(svg => {
+            const spotCode = svg.getAttribute('data-spot-code');
+            const spotData = window.spotWindData ? window.spotWindData[spotCode] : null;
+
+            if (!spotData) return;
+
+            const bars = svg.querySelector('.spot-windrose-bars');
+            if (!bars) return;
+
+            const cx = 70, cy = 70;
+            const maxRadius = 60;
+            const minRadius = 20;
+
+            dirs.forEach((dir, i) => {
+                const angle = angles[i];
+                const quality = spotData[dir];
+                const color = quality !== null ? colors[quality] : '#f0f0f0';
+
+                const rad = (angle - 90) * Math.PI / 180;
+
+                const barLength = minRadius + (maxRadius - minRadius) * 0.75;
+                const x1 = cx + minRadius * Math.cos(rad);
+                const y1 = cy + minRadius * Math.sin(rad);
+                const x2 = cx + barLength * Math.cos(rad);
+                const y2 = cy + barLength * Math.sin(rad);
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                line.setAttribute('stroke', color);
+                line.setAttribute('stroke-width', '5');
+                line.setAttribute('stroke-linecap', 'round');
+                line.setAttribute('opacity', '0.8');
+
+                bars.appendChild(line);
+            });
+
+            // Ajouter les labels N, S, E, W
+            const isMajor = ['n', 's', 'e', 'w'];
+            const majorAngles = {'n': 0, 'nne': 22.5, 'ne': 45, 'ene': 67.5, 'e': 90, 'ese': 112.5, 'se': 135, 'sse': 157.5, 's': 180, 'ssw': 202.5, 'sw': 225, 'wsw': 247.5, 'w': 270, 'wnw': 292.5, 'nw': 315, 'nnw': 337.5};
+
+            isMajor.forEach(dir => {
+                const angle = majorAngles[dir];
+                const rad = (angle - 90) * Math.PI / 180;
+                const labelRadius = maxRadius + 12;
+                const lx = cx + labelRadius * Math.cos(rad);
+                const ly = cy + labelRadius * Math.sin(rad);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', lx);
+                text.setAttribute('y', ly);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                text.setAttribute('font-size', '11');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('fill', '#333');
+                text.textContent = dir.toUpperCase();
+                svg.appendChild(text);
+            });
+        });
+    }
+
+    // Préparer les données des spots
+    window.spotWindData = {
+        {% for spot in spots %}
+            '{{ spot.codeSpot }}': {
+                {% for dir in directions %}
+                    '{{ dir }}': {{ spot.getOrientationQuality(dir) ? spot.getOrientationQuality(dir).value : 'null' }}{{ not loop.last ? ',' : '' }}
+                {% endfor %}
+            }{{ not loop.last ? ',' : '' }}
+        {% endfor %}
+    };
+
+    // Validation des entrées de recherche
+    const searchInput = document.getElementById('search');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('filterForm').submit();
+            }
+        });
+    }
+
+    // Initialiser les roses des vents
+    drawWindroseFilter();
+    drawSpotWindroses();
+});
+</script>
 {% endblock %}

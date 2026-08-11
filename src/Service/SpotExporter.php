@@ -53,10 +53,13 @@ class SpotExporter
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getPeageFromParis());
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getMareeDesc());
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getOrientationDesc());
-            $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->isFoil() ? 1 : 0);
+
+            // IsFoil et IsContraintEte avec VRAI/FAUX/vide
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->isFoil() ? 'VRAI' : ($spot->getFoilDesc() ? 'VRAI' : ''));
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getFoilDesc());
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getWaveDesc());
-            $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->isContraintEte() ? 1 : 0);
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->isContraintEte() ? 'VRAI' : ($spot->getContraintEteDesc() ? 'VRAI' : ''));
+
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getContraintEteDesc());
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getLong());
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getLat());
@@ -71,8 +74,15 @@ class SpotExporter
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getBalise());
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getMaree());
 
+            // Colonnes des conditions contraintes des marées
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getTop());
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getOk());
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getWarn());
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $spot->getKo());
+
+            // Export des orientations avec valeurs numériques (-1 à 2)
             foreach (Spot::DIRECTIONS as $dir) {
-                $val = $spot->getOrientationQuality($dir)?->value;
+                $val = $spot->getOrientationQuality($dir)?->value ?? '';
                 $sheet->setCellValue(Coordinate::stringFromColumnIndex($col++) . $row, $val);
             }
 
